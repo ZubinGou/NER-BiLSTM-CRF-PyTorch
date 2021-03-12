@@ -28,3 +28,4 @@ PyTorch implementation of a BiLSTM-CRF model for named entity recognition.
 
 ## References
 - https://pytorch.org/tutorials/beginner/nlp/advanced_tutorial.html
+- 优化加速1000X版本：https://github.com/mali19064/LSTM-CRF-pytorch-faster/
