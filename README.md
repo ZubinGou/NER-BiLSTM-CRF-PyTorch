@@ -9,13 +9,11 @@ PyTorch implementation of a BiLSTM-CRF model for named entity recognition.
     - 90.94 in CoNLL 2003 (English)
     - 91.47 in CoNLL++
 
-## Related Works
-- Bidirectional LSTM-CRF models for sequence tagging
 
 
-## Corpus
-- [ ] CoNLL 2003 (English)
-- [ ] CoNLL++
+## Data
+- CoNLL 2003 (English)
+  - IOB tagging scheme (convert to IOBES)
 
 ## Future Works
 - 后续paper：
