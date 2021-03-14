@@ -33,19 +33,19 @@ def set_values(name, param, pretrained):
     ).astype(np.float32))
 
 
-def create_dico(item_list):
-    """
-    Create a dictionary of items from a list of list of items.
-    """
-    assert type(item_list) is list
-    dico = {}
-    for items in item_list:
-        for item in items:
-            if item not in dico:
-                dico[item] = 1
-            else:
-                dico[item] += 1
-    return dico
+# def create_dico(item_list):
+#     """
+#     Create a dictionary of items from a list of list of items.
+#     """
+#     assert type(item_list) is list
+#     dico = {}
+#     for items in item_list:
+#         for item in items:
+#             if item not in dico:
+#                 dico[item] = 1
+#             else:
+#                 dico[item] += 1
+#     return dico
 
 
 def create_mapping(dico):
@@ -70,6 +70,8 @@ def iob2(tags):
     """
     Check that tags have a valid IOB format.
     Tags in IOB1 format are converted to IOB2.
+    IOB1: 'B' is only used for the beginning token of a Named Entity (chunk) spanning more than one token.
+    IOB2: 'B' is used in the beginning of every chunk.
     """
     for i, tag in enumerate(tags):
         if tag == 'O':
@@ -91,6 +93,8 @@ def iob2(tags):
 def iob_iobes(tags):
     """
     IOB -> IOBES
+    'E': end
+    'S': singleton
     """
     new_tags = []
     for i, tag in enumerate(tags):

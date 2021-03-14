@@ -1,11 +1,11 @@
 from __future__ import print_function, division
 import os
 import re
-import codecs
 import unicodedata
-from utils import create_dico, create_mapping, zero_digits
+from utils import create_mapping, zero_digits
 from utils import iob2, iob_iobes
 import model
+from collections import Counter
 import string
 import random
 import numpy as np
@@ -25,13 +25,12 @@ def load_sentences(path, lower, zeros):
     """
     sentences = []
     sentence = []
-    for line in codecs.open(path, 'r', 'utf-8'):
+    for line in open(path, 'r', encoding='utf-8'):
         line = zero_digits(line.rstrip()) if zeros else line.rstrip()
-        if not line:
-            if len(sentence) > 0:
-                if 'DOCSTART' not in sentence[0][0]:
-                    sentences.append(sentence)
-                sentence = []
+        if not line and len(sentence) > 0:
+            if 'DOCSTART' not in sentence[0][0]:
+                sentences.append(sentence)
+            sentence = []
         else:
             word = line.split()
             assert len(word) >= 2
@@ -70,9 +69,9 @@ def word_mapping(sentences, lower):
     """
     Create a dictionary and a mapping of words, sorted by frequency.
     """
-    words = [[x[0].lower() if lower else x[0] for x in s] for s in sentences]
-    dico = create_dico(words)
-
+    words = [x[0].lower() if lower else x[0] for s in sentences for x in s]
+    dico = dict(Counter(words))
+    
     dico['<PAD>'] = 10000001
     dico['<UNK>'] = 10000000
     dico = {k:v for k,v in dico.items() if v>=3}
@@ -88,10 +87,10 @@ def char_mapping(sentences):
     """
     Create a dictionary and mapping of characters, sorted by frequency.
     """
-    chars = ["".join([w[0] for w in s]) for s in sentences]
-    dico = create_dico(chars)
+    chars = ''.join([w[0] for s in sentences for w in s])
+    dico = dict(Counter(chars))
     dico['<PAD>'] = 10000000
-    # dico[';'] = 0
+
     char_to_id, id_to_char = create_mapping(dico)
     print("Found %i unique characters" % len(dico))
     return dico, char_to_id, id_to_char
@@ -101,8 +100,8 @@ def tag_mapping(sentences):
     """
     Create a dictionary and a mapping of tags, sorted by frequency.
     """
-    tags = [[word[-1] for word in s] for s in sentences]
-    dico = create_dico(tags)
+    tags = [word[-1] for s in sentences for word in s]
+    dico = dict(Counter(tags))
     dico[model.START_TAG] = -1
     dico[model.STOP_TAG] = -2
     tag_to_id, id_to_tag = create_mapping(dico)
@@ -187,8 +186,7 @@ def augment_with_pretrained(dictionary, ext_emb_path, words):
     # Load pretrained embeddings from file
     pretrained = set([
         line.rstrip().split()[0].strip()
-        for line in codecs.open(ext_emb_path, 'r', 'utf-8')
-        if len(ext_emb_path) > 0
+        for line in open(ext_emb_path, 'r', encoding='utf-8')
     ])
 
     # We either add every word in the pretrained file,

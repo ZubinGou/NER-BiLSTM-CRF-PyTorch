@@ -6,8 +6,7 @@ from collections import OrderedDict
 import loader
 import torch
 import time
-# import cPickle  # python 3버전에선 아래 코드로 통합
-import _pickle as cPickle
+import pickle
 from torch.autograd import Variable
 import matplotlib.pyplot as plt
 import sys
@@ -207,7 +206,7 @@ print("%i / %i / %i sentences in train / dev / test." % (
     len(train_data), len(dev_data), len(test_data)))
 
 all_word_embeds = {}
-for i, line in enumerate(codecs.open(opts.pre_emb, 'r', 'utf-8')):
+for i, line in enumerate(open(opts.pre_emb, 'r', 'utf-8')):
     s = line.strip().split()
     if len(s) == parameters['word_dim'] + 1:
         all_word_embeds[s[0]] = np.array([float(i) for i in s[1:]])
@@ -318,7 +317,7 @@ def evaluating(model, datas, best_F):
 
     os.system('%s < %s > %s' % (eval_script, predf, scoref))
 
-    eval_lines = [l.rstrip() for l in codecs.open(scoref, 'r', 'utf8')]
+    eval_lines = [l.rstrip() for l in open(scoref, 'r', 'utf8')]
 
     for i, line in enumerate(eval_lines):
         print(line)
