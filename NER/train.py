@@ -111,7 +111,7 @@ optparser.add_option(
     help='model name'
 )
 optparser.add_option(
-    '--char_mode', choices=['CNN', 'LSTM'], default='LSTM',
+    '--char_mode', choices=['CNN', 'LSTM'], default='CNN',
     help='char_CNN or char_LSTM'
 )
 opts = optparser.parse_args()[0]
@@ -270,42 +270,41 @@ def evaluating(model, datas, best_F):
     new_F = 0.0
     confusion_matrix = torch.zeros((len(tag_to_id) - 2, len(tag_to_id) - 2))
     for data in datas:
-        ground_truth_id = data['tags']
-        words = data['str_words']
-        print(words)
-        chars2 = data['chars']
-        caps = data['caps']
+        ground_truth_id = data['tags'] # [tad_id]
+        words = data['str_words'] # [word_id]
+        chars = data['chars'] # [[char_id]]
+        caps = data['caps'] # [cap_feat_id]
 
         if parameters['char_mode'] == 'LSTM':
-            chars2_sorted = sorted(chars2, key=lambda p: len(p), reverse=True)
+            chars_sorted = sorted(chars, key=lambda p: len(p), reverse=True)
             d = {}
-            for i, ci in enumerate(chars2):
-                for j, cj in enumerate(chars2_sorted):
+            for i, ci in enumerate(chars):
+                for j, cj in enumerate(chars_sorted):
                     if ci == cj and not j in d and not i in d.values():
                         d[j] = i
                         continue
-            chars2_length = [len(c) for c in chars2_sorted]
-            char_maxl = max(chars2_length)
-            chars2_mask = np.zeros((len(chars2_sorted), char_maxl), dtype='int')
-            for i, c in enumerate(chars2_sorted):
-                chars2_mask[i, :chars2_length[i]] = c
-            chars2_mask = Variable(torch.LongTensor(chars2_mask))
+            chars_length = [len(c) for c in chars_sorted]
+            char_maxl = max(chars_length)
+            chars_mask = np.zeros((len(chars_sorted), char_maxl), dtype='int')
+            for i, c in enumerate(chars_sorted):
+                chars_mask[i, :chars_length[i]] = c
+            chars_mask = Variable(torch.LongTensor(chars_mask))
 
         if parameters['char_mode'] == 'CNN':
             d = {}
-            chars2_length = [len(c) for c in chars2]
-            char_maxl = max(chars2_length)
-            chars2_mask = np.zeros((len(chars2_length), char_maxl), dtype='int')
-            for i, c in enumerate(chars2):
-                chars2_mask[i, :chars2_length[i]] = c
-            chars2_mask = Variable(torch.LongTensor(chars2_mask))
+            chars_length = [len(c) for c in chars]
+            char_maxl = max(chars_length)
+            chars_mask = np.zeros((len(chars_length), char_maxl), dtype='int')
+            for i, c in enumerate(chars):
+                chars_mask[i, :chars_length[i]] = c
+            chars_mask = Variable(torch.LongTensor(chars_mask))
 
         dwords = Variable(torch.LongTensor(data['words']))
         dcaps = Variable(torch.LongTensor(caps))
         if use_gpu:
-            val, out = model(dwords.cuda(), chars2_mask.cuda(), dcaps.cuda(), chars2_length, d)
+            val, out = model(dwords.cuda(), chars_mask.cuda(), dcaps.cuda(), chars_length, d)
         else:
-            val, out = model(dwords, chars2_mask, dcaps, chars2_length, d)
+            val, out = model(dwords, chars_mask, dcaps, chars_length, d)
         predicted_id = out
         for (word, true_id, pred_id) in zip(words, ground_truth_id, predicted_id):
             line = ' '.join([word, id_to_tag[true_id], id_to_tag[pred_id]])
@@ -353,41 +352,41 @@ for epoch in range(1, 10001):
         sentence_in = data['words']
         sentence_in = Variable(torch.LongTensor(sentence_in))
         tags = data['tags']
-        chars2 = data['chars']
+        chars = data['chars']
 
         ######### char lstm
         if parameters['char_mode'] == 'LSTM':
-            chars2_sorted = sorted(chars2, key=lambda p: len(p), reverse=True)
+            chars_sorted = sorted(chars, key=lambda p: len(p), reverse=True)
             d = {}
-            for i, ci in enumerate(chars2):
-                for j, cj in enumerate(chars2_sorted):
+            for i, ci in enumerate(chars):
+                for j, cj in enumerate(chars_sorted):
                     if ci == cj and not j in d and not i in d.values():
                         d[j] = i
                         continue
-            chars2_length = [len(c) for c in chars2_sorted]
-            char_maxl = max(chars2_length)
-            chars2_mask = np.zeros((len(chars2_sorted), char_maxl), dtype='int')
-            for i, c in enumerate(chars2_sorted):
-                chars2_mask[i, :chars2_length[i]] = c
-            chars2_mask = Variable(torch.LongTensor(chars2_mask))
+            chars_length = [len(c) for c in chars_sorted]
+            char_maxl = max(chars_length)
+            chars_mask = np.zeros((len(chars_sorted), char_maxl), dtype='int')
+            for i, c in enumerate(chars_sorted):
+                chars_mask[i, :chars_length[i]] = c
+            chars_mask = Variable(torch.LongTensor(chars_mask))
 
         # ######## char cnn
         if parameters['char_mode'] == 'CNN':
             d = {}
-            chars2_length = [len(c) for c in chars2]
-            char_maxl = max(chars2_length)
-            chars2_mask = np.zeros((len(chars2_length), char_maxl), dtype='int')
-            for i, c in enumerate(chars2):
-                chars2_mask[i, :chars2_length[i]] = c
-            chars2_mask = Variable(torch.LongTensor(chars2_mask))
+            chars_length = [len(c) for c in chars]
+            char_maxl = max(chars_length)
+            chars_mask = np.zeros((len(chars_length), char_maxl), dtype='int')
+            for i, c in enumerate(chars):
+                chars_mask[i, :chars_length[i]] = c
+            chars_mask = Variable(torch.LongTensor(chars_mask))
 
 
         targets = torch.LongTensor(tags)
         caps = Variable(torch.LongTensor(data['caps']))
         if use_gpu:
-            neg_log_likelihood = model.neg_log_likelihood(sentence_in.cuda(), targets.cuda(), chars2_mask.cuda(), caps.cuda(), chars2_length, d)
+            neg_log_likelihood = model.neg_log_likelihood(sentence_in.cuda(), targets.cuda(), chars_mask.cuda(), caps.cuda(), chars_length, d)
         else:
-            neg_log_likelihood = model.neg_log_likelihood(sentence_in, targets, chars2_mask, caps, chars2_length, d)
+            neg_log_likelihood = model.neg_log_likelihood(sentence_in, targets, chars_mask, caps, chars_length, d)
         loss += neg_log_likelihood.data.item() / len(data['words'])
         neg_log_likelihood.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)

@@ -108,11 +108,11 @@ class BiLSTM_CRF(nn.Module):
         score = torch.sum(self.transitions[pad_stop_tags, pad_start_tags]) + torch.sum(feats[r, tags])
         return score
 
-    def _get_lstm_features(self, sentence, chars2, caps, chars2_length, d):
+    def _get_lstm_features(self, sentence, chars, caps, chars2_length, d):
 
         if self.char_mode == 'LSTM':
-            # self.char_lstm_hidden = self.init_lstm_hidden(dim=self.char_lstm_dim, bidirection=True, batchsize=chars2.size(0))
-            chars_embeds = self.char_embeds(chars2).transpose(0, 1)
+            # self.char_lstm_hidden = self.init_lstm_hidden(dim=self.char_lstm_dim, bidirection=True, batchsize=chars.size(0))
+            chars_embeds = self.char_embeds(chars).transpose(0, 1)
             packed = torch.nn.utils.rnn.pack_padded_sequence(chars_embeds, chars2_length)
             lstm_out, _ = self.char_lstm(packed)
             outputs, output_lengths = torch.nn.utils.rnn.pad_packed_sequence(lstm_out)
@@ -125,9 +125,8 @@ class BiLSTM_CRF(nn.Module):
                 chars_embeds[d[i]] = chars_embeds_temp[i]
 
         if self.char_mode == 'CNN':
-            chars_embeds = self.char_embeds(chars2).unsqueeze(1)
+            chars_embeds = self.char_embeds(chars).unsqueeze(1)
             chars_cnn_out3 = self.char_cnn3(chars_embeds)
-            print(chars_cnn_out3.shape)
             chars_embeds = nn.functional.max_pool2d(chars_cnn_out3,
                                                  kernel_size=(chars_cnn_out3.size(2), 1)).view(chars_cnn_out3.size(0), self.out_channels)
 
@@ -201,10 +200,10 @@ class BiLSTM_CRF(nn.Module):
         best_path.reverse()
         return path_score, best_path
 
-    def neg_log_likelihood(self, sentence, tags, chars2, caps, chars2_length, d):
+    def neg_log_likelihood(self, sentence, tags, chars, caps, chars2_length, d):
         # sentence, tags is a list of ints
         # features is a 2D tensor, len(sentence) * self.tagset_size
-        feats = self._get_lstm_features(sentence, chars2, caps, chars2_length, d)
+        feats = self._get_lstm_features(sentence, chars, caps, chars2_length, d)
 
         if self.use_crf:
             forward_score = self._forward_alg(feats)
