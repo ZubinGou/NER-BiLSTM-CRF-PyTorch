@@ -8,6 +8,7 @@ PyTorch implementation of a BiLSTM-CRF model for named entity recognition.
   - 最大特点是在pre-trained word embedding（skip-n-gram）的基础上结合了character-based word embeddings，通过引入字符级特征提高了模型在NER任务中的表现
     - 90.94 in CoNLL 2003 (English)
     - 91.47 in CoNLL++
+- End-to-end Sequence Labeling via Bi-directional LSTM-CNNs-CRF
 
 
 
