@@ -77,7 +77,8 @@ def char_mapping(sentences):
     """
     chars = ''.join([w[0] for s in sentences for w in s])
     dico = dict(Counter(chars))
-    dico['<PAD>'] = 10000000
+    dico['<PAD>'] = 10000001
+    dico['<UNK>'] = 10000000
 
     char_to_id, id_to_char = create_mapping(dico)
     print("Found %i unique characters" % len(dico))
@@ -142,15 +143,15 @@ def prepare_dataset(sentences, word_to_id, char_to_id, tag_to_id, lower=True):
     """
     def f(x): return x.lower() if lower else x
     data = []
-    for s in sentences:
-        str_words = [w[0] for w in s]
+    for sentence in sentences:
+        str_words = [w[0] for w in sentence]
         words = [word_to_id[f(w) if f(w) in word_to_id else '<UNK>']
                  for w in str_words]
         # Skip characters that are not in the training set
-        chars = [[char_to_id[c] for c in w if c in char_to_id]
+        chars = [[char_to_id[c if c in char_to_id else '<UNK>'] for c in w]
                  for w in str_words]
         caps = [cap_feature(w) for w in str_words]
-        tags = [tag_to_id[w[-1]] for w in s]
+        tags = [tag_to_id[w[-1]] for w in sentence]
         data.append({
             'str_words': str_words,
             'words': words,

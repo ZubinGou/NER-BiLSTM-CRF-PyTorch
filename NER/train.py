@@ -19,19 +19,19 @@ models_path = "models/"
 
 optparser = optparse.OptionParser()
 optparser.add_option(
-    "-T", "--train", default="dataset/eng.train54019",
+    "-T", "--train", default="data/eng.train50000",
     help="Train set location"
 )
 optparser.add_option(
-    "-d", "--dev", default="dataset/eng.testa",
+    "-d", "--dev", default="data/eng.testa",
     help="Dev set location"
 )
 optparser.add_option(
-    "-t", "--test", default="dataset/eng.testb",
+    "-t", "--test", default="data/eng.testb",
     help="Test set location"
 )
 optparser.add_option(
-    '--test_train', default='dataset/eng.train54019',
+    '--test_train', default='data/eng.train50000',
     help='test train'
 )
 optparser.add_option(
@@ -75,7 +75,7 @@ optparser.add_option(
     type='int', help="Use a bidirectional LSTM for words"
 )
 optparser.add_option(
-    "-p", "--pre_emb", default="models/glove.6B.100d.txt",
+    "-p", "--pre_emb", default="data/glove.6B.100d.txt",
     help="Location of pretrained embeddings"
 )
 optparser.add_option(
@@ -111,7 +111,7 @@ optparser.add_option(
     help='model name'
 )
 optparser.add_option(
-    '--char_mode', choices=['CNN', 'LSTM'], default='CNN',
+    '--char_mode', choices=['CNN', 'LSTM'], default='LSTM',
     help='char_CNN or char_LSTM'
 )
 opts = optparser.parse_args()[0]
@@ -272,6 +272,7 @@ def evaluating(model, datas, best_F):
     for data in datas:
         ground_truth_id = data['tags']
         words = data['str_words']
+        print(words)
         chars2 = data['chars']
         caps = data['caps']
 
@@ -394,7 +395,8 @@ for epoch in range(1, 10001):
 
         if count % plot_every == 0:
             loss /= plot_every
-            print(count, ': ', loss)
+            # print(count, ': ', loss)
+            print(loss)
             if losses == []:
                 losses.append(loss)
             losses.append(loss)

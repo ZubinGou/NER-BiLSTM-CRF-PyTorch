@@ -101,9 +101,9 @@ class BiLSTM_CRF(nn.Module):
         # Gives the score of a provided tag sequence
         # tags is ground_truth, a list of ints, length is len(sentence)
         # feats is a 2D tensor, len(sentence) * tagset_size
-        r = torch.LongTensor(range(feats.size()[0]), device=self.device)
-        pad_start_tags = torch.cat([torch.LongTensor([self.tag_to_ix[START_TAG]], device=self.device), tags])
-        pad_stop_tags = torch.cat([tags, torch.LongTensor([self.tag_to_ix[STOP_TAG]], device=self.device)])
+        r = torch.LongTensor(range(feats.size()[0])).to(self.device)
+        pad_start_tags = torch.cat([torch.LongTensor([self.tag_to_ix[START_TAG]]).to(self.device), tags])
+        pad_stop_tags = torch.cat([tags, torch.LongTensor([self.tag_to_ix[STOP_TAG]]).to(self.device)])
 
         score = torch.sum(self.transitions[pad_stop_tags, pad_start_tags]) + torch.sum(feats[r, tags])
         return score
@@ -127,6 +127,7 @@ class BiLSTM_CRF(nn.Module):
         if self.char_mode == 'CNN':
             chars_embeds = self.char_embeds(chars2).unsqueeze(1)
             chars_cnn_out3 = self.char_cnn3(chars_embeds)
+            print(chars_cnn_out3.shape)
             chars_embeds = nn.functional.max_pool2d(chars_cnn_out3,
                                                  kernel_size=(chars_cnn_out3.size(2), 1)).view(chars_cnn_out3.size(0), self.out_channels)
 
