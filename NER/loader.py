@@ -1,22 +1,10 @@
-from __future__ import print_function, division
 import os
 import re
-import unicodedata
 from utils import create_mapping, zero_digits
 from utils import iob2, iob_iobes
 import model
 from collections import Counter
-import string
-import random
-import numpy as np
 
-
-def unicodeToAscii(s):
-    return ''.join(
-        c for c in unicodedata.normalize('NFD', s)
-        if unicodedata.category(c) != 'Mn'
-        and c in string.ascii_letters + " .,;'-"
-    )
 
 def load_sentences(path, lower, zeros):
     """
@@ -78,7 +66,7 @@ def word_mapping(sentences, lower):
     word_to_id, id_to_word = create_mapping(dico)
 
     print("Found %i unique words (%i in total)" % (
-        len(dico), sum(len(x) for x in words)
+        len(dico), len(words)
     ))
     return dico, word_to_id, id_to_word
 
@@ -214,102 +202,102 @@ def pad_seq(seq, max_length, PAD_token=0):
     seq += [PAD_token for i in range(max_length - len(seq))]
     return seq
 
-def get_batch(start, batch_size, datas, singletons=[]):
-    input_seqs = []
-    target_seqs = []
-    chars2_seqs = []
+# def get_batch(start, batch_size, datas, singletons=[]):
+#     input_seqs = []
+#     target_seqs = []
+#     chars2_seqs = []
 
-    for data in datas[start:start+batch_size]:
-        # pair is chosen from pairs randomly
-        words = []
-        for word in data['words']:
-            if word in singletons and np.random.uniform() < 0.5:
-                words.append(1)
-            else:
-                words.append(word)
-        input_seqs.append(data['words'])
-        target_seqs.append(data['tags'])
-        chars2_seqs.append(data['chars'])
+#     for data in datas[start:start+batch_size]:
+#         # pair is chosen from pairs randomly
+#         words = []
+#         for word in data['words']:
+#             if word in singletons and np.random.uniform() < 0.5:
+#                 words.append(1)
+#             else:
+#                 words.append(word)
+#         input_seqs.append(data['words'])
+#         target_seqs.append(data['tags'])
+#         chars2_seqs.append(data['chars'])
 
-    if input_seqs == []:
-        return [], [], [], [], [], []
-    seq_pairs = sorted(zip(input_seqs, target_seqs, chars2_seqs), key=lambda p: len(p[0]), reverse=True)
-    input_seqs, target_seqs, chars2_seqs = zip(*seq_pairs)
+#     if input_seqs == []:
+#         return [], [], [], [], [], []
+#     seq_pairs = sorted(zip(input_seqs, target_seqs, chars2_seqs), key=lambda p: len(p[0]), reverse=True)
+#     input_seqs, target_seqs, chars2_seqs = zip(*seq_pairs)
 
-    chars2_seqs_lengths = []
-    chars2_seqs_padded = []
-    for chars2 in chars2_seqs:
-        chars2_lengths = [len(c) for c in chars2]
-        chars2_padded = [pad_seq(c, max(chars2_lengths)) for c in chars2]
-        chars2_seqs_padded.append(chars2_padded)
-        chars2_seqs_lengths.append(chars2_lengths)
+#     chars2_seqs_lengths = []
+#     chars2_seqs_padded = []
+#     for chars2 in chars2_seqs:
+#         chars2_lengths = [len(c) for c in chars2]
+#         chars2_padded = [pad_seq(c, max(chars2_lengths)) for c in chars2]
+#         chars2_seqs_padded.append(chars2_padded)
+#         chars2_seqs_lengths.append(chars2_lengths)
 
-    input_lengths = [len(s) for s in input_seqs]
-    # input_padded is batch * max_length
-    input_padded = [pad_seq(s, max(input_lengths)) for s in input_seqs]
-    target_lengths = [len(s) for s in target_seqs]
-    assert target_lengths == input_lengths
-    # target_padded is batch * max_length
-    target_padded = [pad_seq(s, max(target_lengths)) for s in target_seqs]
+#     input_lengths = [len(s) for s in input_seqs]
+#     # input_padded is batch * max_length
+#     input_padded = [pad_seq(s, max(input_lengths)) for s in input_seqs]
+#     target_lengths = [len(s) for s in target_seqs]
+#     assert target_lengths == input_lengths
+#     # target_padded is batch * max_length
+#     target_padded = [pad_seq(s, max(target_lengths)) for s in target_seqs]
 
-    # var is max_length * batch_size
-    # input_var = Variable(torch.LongTensor(input_padded)).transpose(0, 1)
-    # target_var = Variable(torch.LongTensor(target_padded)).transpose(0, 1)
-    #
-    # if use_gpu:
-    #     input_var = input_var.cuda()
-    #     target_var = target_var.cuda()
+#     # var is max_length * batch_size
+#     # input_var = Variable(torch.LongTensor(input_padded)).transpose(0, 1)
+#     # target_var = Variable(torch.LongTensor(target_padded)).transpose(0, 1)
+#     #
+#     # if use_gpu:
+#     #     input_var = input_var.cuda()
+#     #     target_var = target_var.cuda()
 
-    return input_padded, input_lengths, target_padded, target_lengths, chars2_seqs_padded, chars2_seqs_lengths
-
-
-def random_batch(batch_size, train_data, singletons=[]):
-    input_seqs = []
-    target_seqs = []
-    chars2_seqs = []
+#     return input_padded, input_lengths, target_padded, target_lengths, chars2_seqs_padded, chars2_seqs_lengths
 
 
-    for i in range(batch_size):
-        # pair is chosen from pairs randomly
-        data = random.choice(train_data)
-        words = []
-        for word in data['words']:
-            if word in singletons and np.random.uniform() < 0.5:
-                words.append(1)
-            else:
-                words.append(word)
-        input_seqs.append(data['words'])
-        target_seqs.append(data['tags'])
-        chars2_seqs.append(data['chars'])
+# def random_batch(batch_size, train_data, singletons=[]):
+#     input_seqs = []
+#     target_seqs = []
+#     chars2_seqs = []
 
-    seq_pairs = sorted(zip(input_seqs, target_seqs, chars2_seqs), key=lambda p: len(p[0]), reverse=True)
-    input_seqs, target_seqs, chars2_seqs = zip(*seq_pairs)
 
-    chars2_seqs_lengths = []
-    chars2_seqs_padded = []
-    for chars2 in chars2_seqs:
-        chars2_lengths = [len(c) for c in chars2]
-        chars2_padded = [pad_seq(c, max(chars2_lengths)) for c in chars2]
-        chars2_seqs_padded.append(chars2_padded)
-        chars2_seqs_lengths.append(chars2_lengths)
+#     for i in range(batch_size):
+#         # pair is chosen from pairs randomly
+#         data = random.choice(train_data)
+#         words = []
+#         for word in data['words']:
+#             if word in singletons and np.random.uniform() < 0.5:
+#                 words.append(1)
+#             else:
+#                 words.append(word)
+#         input_seqs.append(data['words'])
+#         target_seqs.append(data['tags'])
+#         chars2_seqs.append(data['chars'])
 
-    input_lengths = [len(s) for s in input_seqs]
-    # input_padded is batch * max_length
-    input_padded = [pad_seq(s, max(input_lengths)) for s in input_seqs]
-    target_lengths = [len(s) for s in target_seqs]
-    assert target_lengths == input_lengths
-    # target_padded is batch * max_length
-    target_padded = [pad_seq(s, max(target_lengths)) for s in target_seqs]
+#     seq_pairs = sorted(zip(input_seqs, target_seqs, chars2_seqs), key=lambda p: len(p[0]), reverse=True)
+#     input_seqs, target_seqs, chars2_seqs = zip(*seq_pairs)
 
-    # var is max_length * batch_size
-    # input_var = Variable(torch.LongTensor(input_padded)).transpose(0, 1)
-    # target_var = Variable(torch.LongTensor(target_padded)).transpose(0, 1)
-    #
-    # if use_gpu:
-    #     input_var = input_var.cuda()
-    #     target_var = target_var.cuda()
+#     chars2_seqs_lengths = []
+#     chars2_seqs_padded = []
+#     for chars2 in chars2_seqs:
+#         chars2_lengths = [len(c) for c in chars2]
+#         chars2_padded = [pad_seq(c, max(chars2_lengths)) for c in chars2]
+#         chars2_seqs_padded.append(chars2_padded)
+#         chars2_seqs_lengths.append(chars2_lengths)
 
-    return input_padded, input_lengths, target_padded, target_lengths, chars2_seqs_padded, chars2_seqs_lengths
+#     input_lengths = [len(s) for s in input_seqs]
+#     # input_padded is batch * max_length
+#     input_padded = [pad_seq(s, max(input_lengths)) for s in input_seqs]
+#     target_lengths = [len(s) for s in target_seqs]
+#     assert target_lengths == input_lengths
+#     # target_padded is batch * max_length
+#     target_padded = [pad_seq(s, max(target_lengths)) for s in target_seqs]
+
+#     # var is max_length * batch_size
+#     # input_var = Variable(torch.LongTensor(input_padded)).transpose(0, 1)
+#     # target_var = Variable(torch.LongTensor(target_padded)).transpose(0, 1)
+#     #
+#     # if use_gpu:
+#     #     input_var = input_var.cuda()
+#     #     target_var = target_var.cuda()
+
+#     return input_padded, input_lengths, target_padded, target_lengths, chars2_seqs_padded, chars2_seqs_lengths
 
 
 

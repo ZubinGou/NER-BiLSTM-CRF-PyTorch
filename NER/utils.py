@@ -3,6 +3,13 @@ import os
 import re
 import numpy as np
 
+
+models_path = "./models"
+eval_path = "./evaluation"
+eval_temp = os.path.join(eval_path, "temp")
+eval_script = os.path.join(eval_path, "conlleval")
+
+
 def get_name(parameters):
     """
     Generate a model name from its parameters.
@@ -70,8 +77,6 @@ def iob2(tags):
     """
     Check that tags have a valid IOB format.
     Tags in IOB1 format are converted to IOB2.
-    IOB1: 'B' is only used for the beginning token of a Named Entity (chunk) spanning more than one token.
-    IOB2: 'B' is used in the beginning of every chunk.
     """
     for i, tag in enumerate(tags):
         if tag == 'O':
@@ -93,8 +98,6 @@ def iob2(tags):
 def iob_iobes(tags):
     """
     IOB -> IOBES
-    'E': end
-    'S': singleton
     """
     new_tags = []
     for i, tag in enumerate(tags):
@@ -207,16 +210,20 @@ def init_embedding(input_embedding):
     Initialize embedding
     """
     bias = np.sqrt(3.0 / input_embedding.size(1))
+    # input_embedding.uniform_(-bias, bias)
     nn.init.uniform_(input_embedding, -bias, bias)
 
 def init_linear(input_linear):
     """
     Initialize linear transformation
     """
-    bias = np.sqrt(6.0 / (input_linear.weight.size(0) + input_linear.weight.size(1)))
-    nn.init.uniform_(input_linear.weight, -bias, bias)
-    if input_linear.bias is not None:
-        input_linear.bias.data.zero_()
+    # bias = np.sqrt(6.0 / (input_linear.weight.size(0) + input_linear.weight.size(1)))
+    # # input_linear.weight.uniform_(-bias, bias)
+    # nn.init.uniform_(input_linear.weight, -bias, bias)
+    # if input_linear.bias is not None:
+    #     input_linear.bias.data.zero_()
+    init.xavier_normal_(input_linear.weight.data)
+    init.normal_(input_linear.bias.data)
 
 def adjust_learning_rate(optimizer, lr):
     """
@@ -230,37 +237,43 @@ def init_lstm(input_lstm):
     """
     Initialize lstm
     """
-    for ind in range(0, input_lstm.num_layers):
-        weight = eval('input_lstm.weight_ih_l' + str(ind))
-        bias = np.sqrt(6.0 / (weight.size(0) / 4 + weight.size(1)))
-        nn.init.uniform_(weight, -bias, bias)
-        weight = eval('input_lstm.weight_hh_l' + str(ind))
-        bias = np.sqrt(6.0 / (weight.size(0) / 4 + weight.size(1)))
-        nn.init.uniform_(weight, -bias, bias)
-    if input_lstm.bidirectional:
-        for ind in range(0, input_lstm.num_layers):
-            weight = eval('input_lstm.weight_ih_l' + str(ind) + '_reverse')
-            bias = np.sqrt(6.0 / (weight.size(0) / 4 + weight.size(1)))
-            nn.init.uniform_(weight, -bias, bias)
-            weight = eval('input_lstm.weight_hh_l' + str(ind) + '_reverse')
-            bias = np.sqrt(6.0 / (weight.size(0) / 4 + weight.size(1)))
-            nn.init.uniform_(weight, -bias, bias)
+    for param in input_lstm.parameters():
+        if len(param.shape) >= 2:
+            init.orthogonal_(param.data)
+        else:
+            init.normal_(param.data)
 
-    if input_lstm.bias:
-        for ind in range(0, input_lstm.num_layers):
-            weight = eval('input_lstm.bias_ih_l' + str(ind))
-            weight.data.zero_()
-            weight.data[input_lstm.hidden_size: 2 * input_lstm.hidden_size] = 1
-            weight = eval('input_lstm.bias_hh_l' + str(ind))
-            weight.data.zero_()
-            weight.data[input_lstm.hidden_size: 2 * input_lstm.hidden_size] = 1
-        if input_lstm.bidirectional:
-            for ind in range(0, input_lstm.num_layers):
-                weight = eval('input_lstm.bias_ih_l' + str(ind) + '_reverse')
-                weight.data.zero_()
-                weight.data[input_lstm.hidden_size: 2 * input_lstm.hidden_size] = 1
-                weight = eval('input_lstm.bias_hh_l' + str(ind) + '_reverse')
-                weight.data.zero_()
-                weight.data[input_lstm.hidden_size: 2 * input_lstm.hidden_size] = 1
+    # for ind in range(0, input_lstm.num_layers):
+    #     weight = eval('input_lstm.weight_ih_l' + str(ind))
+    #     bias = np.sqrt(6.0 / (weight.size(0) / 4 + weight.size(1)))
+    #     nn.init.uniform_(weight, -bias, bias)
+    #     weight = eval('input_lstm.weight_hh_l' + str(ind))
+    #     bias = np.sqrt(6.0 / (weight.size(0) / 4 + weight.size(1)))
+    #     nn.init.uniform_(weight, -bias, bias)
+    # if input_lstm.bidirectional:
+    #     for ind in range(0, input_lstm.num_layers):
+    #         weight = eval('input_lstm.weight_ih_l' + str(ind) + '_reverse')
+    #         bias = np.sqrt(6.0 / (weight.size(0) / 4 + weight.size(1)))
+    #         nn.init.uniform_(weight, -bias, bias)
+    #         weight = eval('input_lstm.weight_hh_l' + str(ind) + '_reverse')
+    #         bias = np.sqrt(6.0 / (weight.size(0) / 4 + weight.size(1)))
+    #         nn.init.uniform_(weight, -bias, bias)
+
+    # if input_lstm.bias:
+    #     for ind in range(0, input_lstm.num_layers):
+    #         weight = eval('input_lstm.bias_ih_l' + str(ind))
+    #         weight.data.zero_()
+    #         weight.data[input_lstm.hidden_size: 2 * input_lstm.hidden_size] = 1
+    #         weight = eval('input_lstm.bias_hh_l' + str(ind))
+    #         weight.data.zero_()
+    #         weight.data[input_lstm.hidden_size: 2 * input_lstm.hidden_size] = 1
+    #     if input_lstm.bidirectional:
+    #         for ind in range(0, input_lstm.num_layers):
+    #             weight = eval('input_lstm.bias_ih_l' + str(ind) + '_reverse')
+    #             weight.data.zero_()
+    #             weight.data[input_lstm.hidden_size: 2 * input_lstm.hidden_size] = 1
+    #             weight = eval('input_lstm.bias_hh_l' + str(ind) + '_reverse')
+    #             weight.data.zero_()
+    #             weight.data[input_lstm.hidden_size: 2 * input_lstm.hidden_size] = 1
 
 

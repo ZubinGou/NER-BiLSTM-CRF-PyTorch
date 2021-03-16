@@ -1,8 +1,8 @@
 # coding=utf-8
-from __future__ import print_function
 import optparse
 import itertools
 from collections import OrderedDict
+from tqdm import tqdm
 import loader
 import torch
 import time
@@ -19,7 +19,7 @@ models_path = "models/"
 
 optparser = optparse.OptionParser()
 optparser.add_option(
-    "-T", "--train", default="dataset/eng.train",
+    "-T", "--train", default="dataset/eng.train54019",
     help="Train set location"
 )
 optparser.add_option(
@@ -137,6 +137,7 @@ parameters['char_mode'] = opts.char_mode
 
 parameters['use_gpu'] = opts.use_gpu == 1 and torch.cuda.is_available()
 use_gpu = parameters['use_gpu']
+device = torch.device('cuda' if use_gpu else 'cpu')
 
 mapping_file = 'models/mapping.pkl'
 
@@ -206,7 +207,7 @@ print("%i / %i / %i sentences in train / dev / test." % (
     len(train_data), len(dev_data), len(test_data)))
 
 all_word_embeds = {}
-for i, line in enumerate(open(opts.pre_emb, 'r', 'utf-8')):
+for i, line in enumerate(open(opts.pre_emb, 'r', encoding='utf-8')):
     s = line.strip().split()
     if len(s) == parameters['word_dim'] + 1:
         all_word_embeds[s[0]] = np.array([float(i) for i in s[1:]])
@@ -229,7 +230,7 @@ with open(mapping_file, 'wb') as f:
         'parameters': parameters,
         'word_embeds': word_embeds
     }
-    cPickle.dump(mappings, f)
+    pickle.dump(mappings, f)
 
 print('word_to_id: ', len(word_to_id))
 model = BiLSTM_CRF(vocab_size=len(word_to_id),
@@ -245,8 +246,9 @@ model = BiLSTM_CRF(vocab_size=len(word_to_id),
                    # cap_embedding_dim=10)
 if parameters['reload']:
     model.load_state_dict(torch.load(model_name))
-if use_gpu:
-    model.cuda()
+
+model.to(device)
+
 learning_rate = 0.015
 optimizer = torch.optim.SGD(model.parameters(), lr=learning_rate, momentum=0.9)
 losses = []
@@ -255,8 +257,8 @@ best_dev_F = -1.0
 best_test_F = -1.0
 best_train_F = -1.0
 all_F = [[0, 0, 0]]
-plot_every = 10
-eval_every = 20
+plot_every = 2
+eval_every = 4
 count = 0
 vis = visdom.Visdom()
 sys.stdout.flush()
@@ -312,12 +314,12 @@ def evaluating(model, datas, best_F):
     predf = eval_temp + '/pred.' + name
     scoref = eval_temp + '/score.' + name
 
-    with open(predf, 'wb') as f:
+    with open(predf, 'w') as f:
         f.write('\n'.join(prediction))
 
     os.system('%s < %s > %s' % (eval_script, predf, scoref))
 
-    eval_lines = [l.rstrip() for l in open(scoref, 'r', 'utf8')]
+    eval_lines = [l.rstrip() for l in open(scoref, 'r', encoding='utf8')]
 
     for i, line in enumerate(eval_lines):
         print(line)
@@ -342,12 +344,11 @@ def evaluating(model, datas, best_F):
 
 model.train(True)
 for epoch in range(1, 10001):
-    for i, index in enumerate(np.random.permutation(len(train_data))):
+    for iter, index in enumerate(tqdm(np.random.permutation(len(train_data)))):
         tr = time.time()
-        count += 1
         data = train_data[index]
         model.zero_grad()
-
+        count += 1
         sentence_in = data['words']
         sentence_in = Variable(torch.LongTensor(sentence_in))
         tags = data['tags']
@@ -386,9 +387,9 @@ for epoch in range(1, 10001):
             neg_log_likelihood = model.neg_log_likelihood(sentence_in.cuda(), targets.cuda(), chars2_mask.cuda(), caps.cuda(), chars2_length, d)
         else:
             neg_log_likelihood = model.neg_log_likelihood(sentence_in, targets, chars2_mask, caps, chars2_length, d)
-        loss += neg_log_likelihood.data[0] / len(data['words'])
+        loss += neg_log_likelihood.data.item() / len(data['words'])
         neg_log_likelihood.backward()
-        torch.nn.utils.clip_grad_norm(model.parameters(), 5.0)
+        torch.nn.utils.clip_grad_norm_(model.parameters(), 5.0)
         optimizer.step()
 
         if count % plot_every == 0:
