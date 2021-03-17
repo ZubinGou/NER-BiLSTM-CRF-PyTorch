@@ -17,7 +17,6 @@ PyTorch implementation of a BiLSTM-CRF model for named entity recognition.
 
 ## Dataset
 - CoNLL 2003 (English)
-  - IOB tagging scheme (convert to IOBES)
 
 ## Model
 - Embeddings
