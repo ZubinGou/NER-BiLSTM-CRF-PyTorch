@@ -303,6 +303,9 @@ class BiLSTM_CRF_MODIFY_PARALLEL(nn.Module):
         feats = self._get_lstm_features_parallel(sentences)
         forward_score = self._forward_alg_new_parallel(feats)
         gold_score = self._score_sentence_parallel(feats, tags)
+        print(forward_score)
+        print(gold_score)
+        print("--")
         return torch.sum(forward_score - gold_score)
 
     def forward(self, sentence):  # dont confuse this with _forward_alg above.
