@@ -7,8 +7,6 @@ from torch.autograd import Variable
 
 from loader import *
 from utils import *
-from train import evaluating
-
 
 
 # python -m visdom.server
@@ -154,10 +152,6 @@ def eval(model, datas):
               ["%.3f" % (confusion_matrix[i][i] * 100. / max(1, confusion_matrix[i].sum()))])
         ))
 
-# t = time.time()
-# eval(model, test_data)
-# print(time.time() - t)
-
 t = time.time()
-evaluating(model, test_data, id_to_tag)
+eval(model, test_data)
 print(time.time() - t)

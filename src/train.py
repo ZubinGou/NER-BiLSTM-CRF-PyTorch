@@ -121,59 +121,142 @@ model_name = models_path + name  # get_name(parameters)
 tmp_model = model_name + ".tmp"
 
 
-def evaluating(model, datas, id_to_tag, best_F=0):
+# def evaluating_with_sklearn(model, datas, best_F=0):
+#     # FB1 on word level
+#     save = False
+#     new_F = 0.0
+#     gold_tag_id = []
+#     pred_tag_id = []
+#     for data in datas:
+#         gold_tag_id.extend(data["tags"])  # [tad_id]
+#         chars = data["chars"]  # [[char_id]]
+#         caps = data["caps"]  # [cap_feat_id]
+
+#         if parameters["char_mode"] == "LSTM":
+#             chars_sorted = sorted(chars, key=lambda p: len(p), reverse=True)
+#             d = {}
+#             for i, ci in enumerate(chars):
+#                 for j, cj in enumerate(chars_sorted):
+#                     if ci == cj and not j in d and not i in d.values():
+#                         d[j] = i
+#                         continue
+#             chars_length = [len(c) for c in chars_sorted]
+#             char_maxl = max(chars_length)
+#             chars_mask = np.zeros((len(chars_sorted), char_maxl), dtype="int")
+#             for i, c in enumerate(chars_sorted):
+#                 chars_mask[i, :chars_length[i]] = c
+#             chars_mask = Variable(torch.LongTensor(chars_mask))
+
+#         if parameters["char_mode"] == "CNN":
+#             d = {}
+#             chars_length = [len(c) for c in chars]
+#             char_maxl = max(chars_length)
+#             chars_mask = np.zeros((len(chars_length), char_maxl), dtype="int")
+#             for i, c in enumerate(chars):
+#                 chars_mask[i, :chars_length[i]] = c
+#             chars_mask = Variable(torch.LongTensor(chars_mask))
+
+#         dwords = Variable(torch.LongTensor(data["words"]))
+#         dcaps = Variable(torch.LongTensor(caps))
+#         if use_gpu:
+#             val, out = model(dwords.cuda(), chars_mask.cuda(), dcaps.cuda(), chars_length, d)
+#         else:
+#             val, out = model(dwords, chars_mask, dcaps, chars_length, d)
+#         pred_tag_id.extend(out)
+
+#     tag_ids = list(id_to_tag.keys())[:-2]  # ignore <start> and <stop>
+#     tags = list(id_to_tag.values())[:-2]
+#     print(classification_report(gold_tag_id, pred_tag_id, labels=tag_ids[0:], target_names=tags[0:], digits=4))
+#     print(confusion_matrix(gold_tag_id, pred_tag_id, labels=tag_ids))
+#     new_F = f1_score(gold_tag_id, pred_tag_id, average="micro")
+#     print()
+#     if new_F > best_F:
+#         best_F = new_F
+#         save = True
+#         print(f"the best F is {best_F} \n\n")
+#     return best_F, new_F, save
+
+def evaluating(model, datas, best_F):
+    # FB1 on pharse level
+    prediction = []
     save = False
     new_F = 0.0
-    gold_tag_id = []
-    pred_tag_id = []
+    confusion_matrix = torch.zeros((len(tag_to_id) - 2, len(tag_to_id) - 2))
     for data in datas:
-        gold_tag_id.extend(data["tags"])  # [tad_id]
-        chars = data["chars"]  # [[char_id]]
-        caps = data["caps"]  # [cap_feat_id]
+        ground_truth_id = data['tags']
+        words = data['str_words']
+        chars2 = data['chars']
+        caps = data['caps']
 
-        if parameters["char_mode"] == "LSTM":
-            chars_sorted = sorted(chars, key=lambda p: len(p), reverse=True)
+        if parameters['char_mode'] == 'LSTM':
+            chars2_sorted = sorted(chars2, key=lambda p: len(p), reverse=True)
             d = {}
-            for i, ci in enumerate(chars):
-                for j, cj in enumerate(chars_sorted):
+            for i, ci in enumerate(chars2):
+                for j, cj in enumerate(chars2_sorted):
                     if ci == cj and not j in d and not i in d.values():
                         d[j] = i
                         continue
-            chars_length = [len(c) for c in chars_sorted]
-            char_maxl = max(chars_length)
-            chars_mask = np.zeros((len(chars_sorted), char_maxl), dtype="int")
-            for i, c in enumerate(chars_sorted):
-                chars_mask[i, :chars_length[i]] = c
-            chars_mask = Variable(torch.LongTensor(chars_mask))
+            chars2_length = [len(c) for c in chars2_sorted]
+            char_maxl = max(chars2_length)
+            chars2_mask = np.zeros((len(chars2_sorted), char_maxl), dtype='int')
+            for i, c in enumerate(chars2_sorted):
+                chars2_mask[i, :chars2_length[i]] = c
+            chars2_mask = Variable(torch.LongTensor(chars2_mask))
 
-        if parameters["char_mode"] == "CNN":
+        if parameters['char_mode'] == 'CNN':
             d = {}
-            chars_length = [len(c) for c in chars]
-            char_maxl = max(chars_length)
-            chars_mask = np.zeros((len(chars_length), char_maxl), dtype="int")
-            for i, c in enumerate(chars):
-                chars_mask[i, :chars_length[i]] = c
-            chars_mask = Variable(torch.LongTensor(chars_mask))
+            chars2_length = [len(c) for c in chars2]
+            char_maxl = max(chars2_length)
+            chars2_mask = np.zeros((len(chars2_length), char_maxl), dtype='int')
+            for i, c in enumerate(chars2):
+                chars2_mask[i, :chars2_length[i]] = c
 
-        dwords = Variable(torch.LongTensor(data["words"]))
+            chars2_mask = Variable(torch.LongTensor(chars2_mask))
+
+        dwords = Variable(torch.LongTensor(data['words']))
         dcaps = Variable(torch.LongTensor(caps))
         if use_gpu:
-            val, out = model(dwords.cuda(), chars_mask.cuda(), dcaps.cuda(), chars_length, d)
+            val, out = model(dwords.cuda(), chars2_mask.cuda(), dcaps.cuda(), chars2_length, d)
         else:
-            val, out = model(dwords, chars_mask, dcaps, chars_length, d)
-        pred_tag_id.extend(out)
+            val, out = model(dwords, chars2_mask, dcaps, chars2_length, d)
+        predicted_id = out
+        for (word, true_id, pred_id) in zip(words, ground_truth_id, predicted_id):
+            line = ' '.join([word, id_to_tag[true_id], id_to_tag[pred_id]])
+            prediction.append(line)
+            confusion_matrix[true_id, pred_id] += 1
+        prediction.append('')
+    predf = eval_temp + '/pred.' + name
+    scoref = eval_temp + '/score.' + name
 
-    tag_ids = list(id_to_tag.keys())[:-2]  # ignore <start> and <stop>
-    tags = list(id_to_tag.values())[:-2]
-    print(classification_report(gold_tag_id, pred_tag_id, labels=tag_ids[1:], target_names=tags[1:]))
-    print(confusion_matrix(gold_tag_id, pred_tag_id, labels=tag_ids))
-    new_F = f1_score(gold_tag_id, pred_tag_id, average="micro")
+    with open(predf, 'w') as f:
+        f.write('\n'.join(prediction))
+
+    os.system('%s < %s > %s' % (eval_script, predf, scoref))
+
+    eval_lines = [l.rstrip() for l in open(scoref, 'r', encoding='utf8')]
+
+    for i, line in enumerate(eval_lines):
+        print(line)
+        if i == 1:
+            new_F = float(line.strip().split()[-1])
+            if new_F > best_F:
+                best_F = new_F
+                save = True
+                print('the best F is ', new_F)
+
+    print(("{: >2}{: >7}{: >7}%s{: >9}" % ("{: >7}" * confusion_matrix.size(0))).format(
+        "ID", "NE", "Total",
+        *([id_to_tag[i] for i in range(confusion_matrix.size(0))] + ["Percent"])
+    ))
+    for i in range(confusion_matrix.size(0)):
+        print(("{: >2}{: >7}{: >7}%s{: >9}" % ("{: >7}" * confusion_matrix.size(0))).format(
+            str(i), id_to_tag[i], str(confusion_matrix[i].sum().item()),
+            *([confusion_matrix[i][j] for j in range(confusion_matrix.size(0))] +
+              ["%.3f" % (confusion_matrix[i][i] * 100. / max(1, confusion_matrix[i].sum()))])
+        ))
     print()
-    if new_F > best_F:
-        best_F = new_F
-        save = True
-        print(f"the best F is {best_F} \n\n")
     return best_F, new_F, save
+
 
 
 def train():
@@ -271,11 +354,11 @@ def train():
             if (count % (eval_every) == 0 and count > (eval_every * 20) or count % (eval_every * 4) == 0 and count <
                 (eval_every * 20)):
                 model.train(False)
-                best_train_F, new_train_F, _ = evaluating(model, test_train_data, id_to_tag, best_train_F)
-                best_dev_F, new_dev_F, save = evaluating(model, dev_data, id_to_tag, best_dev_F)
+                best_train_F, new_train_F, _ = evaluating(model, test_train_data, best_train_F)
+                best_dev_F, new_dev_F, save = evaluating(model, dev_data, best_dev_F)
                 if save:
                     torch.save(model, model_name)
-                best_test_F, new_test_F, _ = evaluating(model, test_data, id_to_tag, best_test_F)
+                best_test_F, new_test_F, _ = evaluating(model, test_data, best_test_F)
                 sys.stdout.flush()
 
                 all_F.append([new_train_F, new_dev_F, new_test_F])

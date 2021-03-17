@@ -8,21 +8,6 @@ START_TAG = "<START>"
 STOP_TAG = "<STOP>"
 
 
-def to_scalar(var):
-    return var.view(-1).data.tolist()[0]
-
-
-def argmax(vec, dim):
-    _, idx = torch.max(vec, 1)
-    return to_scalar(idx)
-
-
-def prepare_sequence(seq, to_ix):
-    idxs = [to_ix[w] for w in seq]
-    tensor = torch.LongTensor(idxs)
-    return Variable(tensor)
-
-
 # Compute log sum exp in a numerically stable way for the forward algorithm
 def log_sum_exp(smat):
     # status matrix (smat): (tagset_size, tagset_size)
@@ -62,10 +47,7 @@ class BiLSTM_CRF(nn.Module):
         self.out_channels = char_lstm_dim
         self.char_mode = char_mode
 
-        print(
-            "char_mode: %s, out_channels: %d, hidden_dim: %d, "
-            % (char_mode, char_lstm_dim, hidden_dim)
-        )
+        print("char_mode: %s, out_channels: %d, hidden_dim: %d, " % (char_mode, char_lstm_dim, hidden_dim))
 
         if self.n_cap and self.cap_embedding_dim:
             self.cap_embeds = nn.Embedding(self.n_cap, self.cap_embedding_dim)
@@ -76,9 +58,7 @@ class BiLSTM_CRF(nn.Module):
             self.char_embeds = nn.Embedding(len(char_to_ix), char_embedding_dim)
             torch.nn.init.xavier_uniform_(self.char_embeds.weight)
             if self.char_mode == "LSTM":
-                self.char_lstm = nn.LSTM(
-                    char_embedding_dim, char_lstm_dim, num_layers=1, bidirectional=True
-                )
+                self.char_lstm = nn.LSTM(char_embedding_dim, char_lstm_dim, num_layers=1, bidirectional=True)
                 init_lstm(self.char_lstm)
             if self.char_mode == "CNN":
                 self.char_cnn3 = nn.Conv2d(
@@ -111,14 +91,11 @@ class BiLSTM_CRF(nn.Module):
                 )
         else:
             if self.char_mode == "LSTM":
-                self.lstm = nn.LSTM(
-                    embedding_dim + char_lstm_dim * 2, hidden_dim, bidirectional=True
-                )
+                self.lstm = nn.LSTM(embedding_dim + char_lstm_dim * 2, hidden_dim, bidirectional=True)
             if self.char_mode == "CNN":
-                self.lstm = nn.LSTM(
-                    embedding_dim + self.out_channels, hidden_dim, bidirectional=True
-                )
+                self.lstm = nn.LSTM(embedding_dim + self.out_channels, hidden_dim, bidirectional=True)
         init_lstm(self.lstm)
+        # # high way
         # self.hw_trans = nn.Linear(self.out_channels, self.out_channels)
         # self.hw_gate = nn.Linear(self.out_channels, self.out_channels)
         # self.h2_h1 = nn.Linear(hidden_dim * 2, hidden_dim)
@@ -130,9 +107,7 @@ class BiLSTM_CRF(nn.Module):
         init_linear(self.hidden2tag)
 
         if self.use_crf:
-            self.transitions = nn.Parameter(
-                torch.randn(self.tagset_size, self.tagset_size)
-            )
+            self.transitions = nn.Parameter(torch.randn(self.tagset_size, self.tagset_size))
             self.transitions.data[:, tag_to_ix[START_TAG]] = -10000
             self.transitions.data[tag_to_ix[STOP_TAG], :] = -10000
 
@@ -141,16 +116,10 @@ class BiLSTM_CRF(nn.Module):
         # tags is ground_truth, a list of ints, length is len(sentence)
         # feats is a 2D tensor, len(sentence) * tagset_size
         r = torch.LongTensor(range(feats.size()[0])).to(self.device)
-        pad_start_tags = torch.cat(
-            [torch.LongTensor([self.tag_to_ix[START_TAG]]).to(self.device), tags]
-        )
-        pad_stop_tags = torch.cat(
-            [tags, torch.LongTensor([self.tag_to_ix[STOP_TAG]]).to(self.device)]
-        )
+        pad_start_tags = torch.cat([torch.LongTensor([self.tag_to_ix[START_TAG]]).to(self.device), tags])
+        pad_stop_tags = torch.cat([tags, torch.LongTensor([self.tag_to_ix[STOP_TAG]]).to(self.device)])
 
-        score = torch.sum(self.transitions[pad_start_tags, pad_stop_tags]) + torch.sum(
-            feats[r, tags]
-        )
+        score = torch.sum(self.transitions[pad_start_tags, pad_stop_tags]) + torch.sum(feats[r, tags])
         return score
 
     def _get_lstm_features(self, sentence, chars, caps, chars2_length, d):
@@ -158,22 +127,17 @@ class BiLSTM_CRF(nn.Module):
         if self.char_mode == "LSTM":
             # self.char_lstm_hidden = self.init_lstm_hidden(dim=self.char_lstm_dim, bidirection=True, batchsize=chars.size(0))
             chars_embeds = self.char_embeds(chars).transpose(0, 1)
-            packed = torch.nn.utils.rnn.pack_padded_sequence(
-                chars_embeds, chars2_length
-            )
+            packed = torch.nn.utils.rnn.pack_padded_sequence(chars_embeds, chars2_length)
             lstm_out, _ = self.char_lstm(packed)
             outputs, output_lengths = torch.nn.utils.rnn.pad_packed_sequence(lstm_out)
             outputs = outputs.transpose(0, 1)
-            chars_embeds_temp = Variable(
-                torch.FloatTensor(torch.zeros((outputs.size(0), outputs.size(2))))
-            ).to(self.device)
+            chars_embeds_temp = Variable(torch.FloatTensor(torch.zeros(
+                (outputs.size(0), outputs.size(2))))).to(self.device)
             for i, index in enumerate(output_lengths):
-                chars_embeds_temp[i] = torch.cat(
-                    (
-                        outputs[i, index - 1, : self.char_lstm_dim],
-                        outputs[i, 0, self.char_lstm_dim :],
-                    )
-                )
+                chars_embeds_temp[i] = torch.cat((
+                    outputs[i, index - 1, :self.char_lstm_dim],
+                    outputs[i, 0, self.char_lstm_dim:],
+                ))
             chars_embeds = chars_embeds_temp.clone()
             for i in range(chars_embeds.size(0)):
                 chars_embeds[d[i]] = chars_embeds_temp[i]
@@ -181,9 +145,9 @@ class BiLSTM_CRF(nn.Module):
         if self.char_mode == "CNN":
             chars_embeds = self.char_embeds(chars).unsqueeze(1)
             chars_cnn_out3 = self.char_cnn3(chars_embeds)
-            chars_embeds = nn.functional.max_pool2d(
-                chars_cnn_out3, kernel_size=(chars_cnn_out3.size(2), 1)
-            ).view(chars_cnn_out3.size(0), self.out_channels)
+            chars_embeds = nn.functional.max_pool2d(chars_cnn_out3,
+                                                    kernel_size=(chars_cnn_out3.size(2),
+                                                                 1)).view(chars_cnn_out3.size(0), self.out_channels)
 
         # t = self.hw_gate(chars_embeds) # high way
         # g = nn.functional.sigmoid(t)
@@ -212,18 +176,14 @@ class BiLSTM_CRF(nn.Module):
         alpha[0][self.tag_to_ix[START_TAG]] = 0.0
         for feat in feats:
             alpha = log_sum_exp(alpha.T + feat.unsqueeze(0) + self.transitions)
-        return log_sum_exp(
-            alpha.T + 0 + self.transitions[:, [self.tag_to_ix[STOP_TAG]]]
-        ).flatten()[0]
+        return log_sum_exp(alpha.T + 0 + self.transitions[:, [self.tag_to_ix[STOP_TAG]]]).flatten()[0]
 
     def viterbi_decode(self, feats):
         backtrace = []
         alpha = torch.full((1, self.tagset_size), -10000.0, device=self.device)
         alpha[0][self.tag_to_ix[START_TAG]] = 0
         for feat in feats:
-            smat = (
-                alpha.T + feat.unsqueeze(0) + self.transitions
-            )  # (tagset_size, tagset_size)
+            smat = (alpha.T + feat.unsqueeze(0) + self.transitions)  # (tagset_size, tagset_size)
             backtrace.append(smat.argmax(0))  # column_max
             alpha = log_sum_exp(smat)
         # backtrack

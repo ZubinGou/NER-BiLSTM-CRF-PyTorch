@@ -7,16 +7,18 @@ PyTorch implementation of a BiLSTM-CRF model for named entity recognition.
 
 ## Papers
 - Bidirectional LSTM-CRF Models for Sequence Tagging (Huang et. al., 2015)
-  - 首次将BiLSTM-CRF用于序列标注
+  - the first paper apply BiLSTM-CRF to NER
 - Neural Architectures for Named Entity Recognition (Lample et. al., 2016)
-  - 最大特点是在pre-trained word embedding（skip-n-gram）的基础上结合了character-based word embeddings，通过引入字符级特征提高了模型在NER任务中的表现
-    - 90.94 in CoNLL 2003 (English)
-    - 91.47 in CoNLL++
+  - pre-trained word embedding（skip-n-gram）with character-based word embeddings，improved the performance by introducing character-level features.
+  > 90.94 in CoNLL 2003 (English) & 91.47 in CoNLL++
 - End-to-end Sequence Labeling via Bi-directional LSTM-CNNs-CRF (Ma et al., 2016)
     - CNNs
 
 ## Dataset
 - CoNLL 2003 (English)
+
+### Evaluation
+- conlleval: Perl script used to calculate FB1 (**phrase level**)
 
 ## Model
 - Embeddings
@@ -25,12 +27,12 @@ PyTorch implementation of a BiLSTM-CRF model for named entity recognition.
 - BiLSTM-CRF (Lample et. al., 2016)
 
 ## Results
-用 Tesla T4 训练一晚，约70个 epoch，test 集上 F1 达到 91.01
+Trained with Tesla T4 for for one night (70 epochs), obtain 91.01% F1.
 
 ![](images/result.png)
 
 ## Future Works
-- 后续 paper：
+- Next paper：
   - BiLSTM-CRF+ELMo ((Peters et al., 2018)
   - LM-LSTM-CRF (Liu et al., 2018)
   - Flair
