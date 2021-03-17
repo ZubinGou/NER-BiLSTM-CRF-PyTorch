@@ -1,9 +1,8 @@
 # coding=utf-8
-from __future__ import print_function
 import optparse
 import torch
 import time
-import cPickle
+import pickle
 from torch.autograd import Variable
 
 from loader import *
@@ -15,17 +14,17 @@ t = time.time()
 
 optparser = optparse.OptionParser()
 optparser.add_option(
-    "-t", "--test", default="dataset/eng.testb",
+    "-t", "--test", default="data/eng.testb",
     help="Test set location"
 )
 optparser.add_option(
     '--score', default='evaluation/temp/score.txt',
     help='score file location'
 )
-optparser.add_option(
-    "-f", "--crf", default="0",
-    type='int', help="Use CRF (0 to disable)"
-)
+# optparser.add_option(
+#     "-f", "--crf", default="1",
+#     type='int', help="Use CRF (0 to disable)"
+# )
 optparser.add_option(
     "-g", '--use_gpu', default='1',
     type='int', help='whether or not to ues gpu'
@@ -35,7 +34,7 @@ optparser.add_option(
     help='loss file location'
 )
 optparser.add_option(
-    '--model_path', default='models/lstm_crf.model',
+    '--model_path', default='models/t4-night',
     help='model path'
 )
 optparser.add_option(
@@ -52,7 +51,7 @@ opts = optparser.parse_args()[0]
 mapping_file = opts.map_path
 
 with open(mapping_file, 'rb') as f:
-    mappings = cPickle.load(f)
+    mappings = pickle.load(f)
 
 word_to_id = mappings['word_to_id']
 tag_to_id = mappings['tag_to_id']
@@ -157,7 +156,7 @@ def eval(model, datas, maxl=1):
     predf = eval_temp + '/pred.' + model_name
     scoref = eval_temp + '/score.' + model_name
 
-    with open(predf, 'wb') as f:
+    with open(predf, 'w') as f:
         f.write('\n'.join(prediction))
 
     os.system('%s < %s > %s' % (eval_script, predf, scoref))
@@ -180,8 +179,9 @@ def eval(model, datas, maxl=1):
 # for l in range(1, 6):
 #     print('maxl=', l)
 #     eval(model, test_data, l)
-#     # print()
-# # for i in range(10):
-# #     eval(model, test_data, 100)
+    # print()
+# for i in range(10):
+#     eval(model, test_data, 100)
 
+eval(model, test_data, 1)
 print(time.time() - t)

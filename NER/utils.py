@@ -1,8 +1,7 @@
-from __future__ import print_function
 import os
 import re
 import numpy as np
-
+from torch.nn import init
 
 models_path = "./models"
 eval_path = "./evaluation"
@@ -17,10 +16,10 @@ def get_name(parameters):
     l = []
     for k, v in parameters.items():
         if type(v) is str and "/" in v:
-            l.append((k, v[::-1][:v[::-1].index('/')][::-1]))
+            l.append((k, v[::-1][: v[::-1].index("/")][::-1]))
         else:
             l.append((k, v))
-    name = ",".join(["%s=%s" % (k, str(v).replace(',', '')) for k, v in l])
+    name = ",".join(["%s=%s" % (k, str(v).replace(",", "")) for k, v in l])
     return "".join(i for i in name if i not in "\/:*?<>|")
 
 
@@ -35,24 +34,7 @@ def set_values(name, param, pretrained):
             "Size mismatch for parameter %s. Expected %i, found %i."
             % (name, param_value.size, pretrained.size)
         )
-    param.set_value(np.reshape(
-        pretrained, param_value.shape
-    ).astype(np.float32))
-
-
-# def create_dico(item_list):
-#     """
-#     Create a dictionary of items from a list of list of items.
-#     """
-#     assert type(item_list) is list
-#     dico = {}
-#     for items in item_list:
-#         for item in items:
-#             if item not in dico:
-#                 dico[item] = 1
-#             else:
-#                 dico[item] += 1
-#     return dico
+    param.set_value(np.reshape(pretrained, param_value.shape).astype(np.float32))
 
 
 def create_mapping(dico):
@@ -70,7 +52,7 @@ def zero_digits(s):
     """
     Replace every digit in a string by a zero.
     """
-    return re.sub('\d', '0', s)
+    return re.sub("\d", "0", s)
 
 
 def iob2(tags):
@@ -79,19 +61,19 @@ def iob2(tags):
     Tags in IOB1 format are converted to IOB2.
     """
     for i, tag in enumerate(tags):
-        if tag == 'O':
+        if tag == "O":
             continue
-        split = tag.split('-')
-        if len(split) != 2 or split[0] not in ['I', 'B']:
+        split = tag.split("-")
+        if len(split) != 2 or split[0] not in ["I", "B"]:
             return False
-        if split[0] == 'B':
+        if split[0] == "B":
             continue
-        elif i == 0 or tags[i - 1] == 'O':  # conversion IOB1 to IOB2
-            tags[i] = 'B' + tag[1:]
+        elif i == 0 or tags[i - 1] == "O":  # conversion IOB1 to IOB2
+            tags[i] = "B" + tag[1:]
         elif tags[i - 1][1:] == tag[1:]:
             continue
         else:  # conversion IOB1 to IOB2
-            tags[i] = 'B' + tag[1:]
+            tags[i] = "B" + tag[1:]
     return True
 
 
@@ -101,22 +83,20 @@ def iob_iobes(tags):
     """
     new_tags = []
     for i, tag in enumerate(tags):
-        if tag == 'O':
+        if tag == "O":
             new_tags.append(tag)
-        elif tag.split('-')[0] == 'B':
-            if i + 1 != len(tags) and \
-               tags[i + 1].split('-')[0] == 'I':
+        elif tag.split("-")[0] == "B":
+            if i + 1 != len(tags) and tags[i + 1].split("-")[0] == "I":
                 new_tags.append(tag)
             else:
-                new_tags.append(tag.replace('B-', 'S-'))
-        elif tag.split('-')[0] == 'I':
-            if i + 1 < len(tags) and \
-                    tags[i + 1].split('-')[0] == 'I':
+                new_tags.append(tag.replace("B-", "S-"))
+        elif tag.split("-")[0] == "I":
+            if i + 1 < len(tags) and tags[i + 1].split("-")[0] == "I":
                 new_tags.append(tag)
             else:
-                new_tags.append(tag.replace('I-', 'E-'))
+                new_tags.append(tag.replace("I-", "E-"))
         else:
-            raise Exception('Invalid IOB format!')
+            raise Exception("Invalid IOB format!")
     return new_tags
 
 
@@ -126,18 +106,18 @@ def iobes_iob(tags):
     """
     new_tags = []
     for i, tag in enumerate(tags):
-        if tag.split('-')[0] == 'B':
+        if tag.split("-")[0] == "B":
             new_tags.append(tag)
-        elif tag.split('-')[0] == 'I':
+        elif tag.split("-")[0] == "I":
             new_tags.append(tag)
-        elif tag.split('-')[0] == 'S':
-            new_tags.append(tag.replace('S-', 'B-'))
-        elif tag.split('-')[0] == 'E':
-            new_tags.append(tag.replace('E-', 'I-'))
-        elif tag.split('-')[0] == 'O':
+        elif tag.split("-")[0] == "S":
+            new_tags.append(tag.replace("S-", "B-"))
+        elif tag.split("-")[0] == "E":
+            new_tags.append(tag.replace("E-", "I-"))
+        elif tag.split("-")[0] == "O":
             new_tags.append(tag)
         else:
-            raise Exception('Invalid format!')
+            raise Exception("Invalid format!")
     return new_tags
 
 
@@ -181,56 +161,50 @@ def create_input(data, parameters, add_label, singletons=None):
     Take sentence data and return an input for
     the training or the evaluation function.
     """
-    words = data['words']
-    chars = data['chars']
+    words = data["words"]
+    chars = data["chars"]
     if singletons is not None:
         words = insert_singletons(words, singletons)
-    if parameters['cap_dim']:
-        caps = data['caps']
+    if parameters["cap_dim"]:
+        caps = data["caps"]
     char_for, char_rev, char_pos = pad_word_chars(chars)
     input = []
-    if parameters['word_dim']:
+    if parameters["word_dim"]:
         input.append(words)
-    if parameters['char_dim']:
+    if parameters["char_dim"]:
         input.append(char_for)
-        if parameters['char_bidirect']:
+        if parameters["char_bidirect"]:
             input.append(char_rev)
         input.append(char_pos)
-    if parameters['cap_dim']:
+    if parameters["cap_dim"]:
         input.append(caps)
     if add_label:
-        input.append(data['tags'])
+        input.append(data["tags"])
     return input
 
-import torch.nn as nn
-from torch.nn import init
 
 def init_embedding(input_embedding):
     """
     Initialize embedding
     """
     bias = np.sqrt(3.0 / input_embedding.size(1))
-    # input_embedding.uniform_(-bias, bias)
-    nn.init.uniform_(input_embedding, -bias, bias)
+    init.uniform_(input_embedding, -bias, bias)
+
 
 def init_linear(input_linear):
     """
     Initialize linear transformation
     """
-    # bias = np.sqrt(6.0 / (input_linear.weight.size(0) + input_linear.weight.size(1)))
-    # # input_linear.weight.uniform_(-bias, bias)
-    # nn.init.uniform_(input_linear.weight, -bias, bias)
-    # if input_linear.bias is not None:
-    #     input_linear.bias.data.zero_()
     init.xavier_normal_(input_linear.weight.data)
     init.normal_(input_linear.bias.data)
+
 
 def adjust_learning_rate(optimizer, lr):
     """
     shrink learning rate for pytorch
     """
     for param_group in optimizer.param_groups:
-        param_group['lr'] = lr
+        param_group["lr"] = lr
 
 
 def init_lstm(input_lstm):
@@ -242,38 +216,3 @@ def init_lstm(input_lstm):
             init.orthogonal_(param.data)
         else:
             init.normal_(param.data)
-
-    # for ind in range(0, input_lstm.num_layers):
-    #     weight = eval('input_lstm.weight_ih_l' + str(ind))
-    #     bias = np.sqrt(6.0 / (weight.size(0) / 4 + weight.size(1)))
-    #     nn.init.uniform_(weight, -bias, bias)
-    #     weight = eval('input_lstm.weight_hh_l' + str(ind))
-    #     bias = np.sqrt(6.0 / (weight.size(0) / 4 + weight.size(1)))
-    #     nn.init.uniform_(weight, -bias, bias)
-    # if input_lstm.bidirectional:
-    #     for ind in range(0, input_lstm.num_layers):
-    #         weight = eval('input_lstm.weight_ih_l' + str(ind) + '_reverse')
-    #         bias = np.sqrt(6.0 / (weight.size(0) / 4 + weight.size(1)))
-    #         nn.init.uniform_(weight, -bias, bias)
-    #         weight = eval('input_lstm.weight_hh_l' + str(ind) + '_reverse')
-    #         bias = np.sqrt(6.0 / (weight.size(0) / 4 + weight.size(1)))
-    #         nn.init.uniform_(weight, -bias, bias)
-
-    # if input_lstm.bias:
-    #     for ind in range(0, input_lstm.num_layers):
-    #         weight = eval('input_lstm.bias_ih_l' + str(ind))
-    #         weight.data.zero_()
-    #         weight.data[input_lstm.hidden_size: 2 * input_lstm.hidden_size] = 1
-    #         weight = eval('input_lstm.bias_hh_l' + str(ind))
-    #         weight.data.zero_()
-    #         weight.data[input_lstm.hidden_size: 2 * input_lstm.hidden_size] = 1
-    #     if input_lstm.bidirectional:
-    #         for ind in range(0, input_lstm.num_layers):
-    #             weight = eval('input_lstm.bias_ih_l' + str(ind) + '_reverse')
-    #             weight.data.zero_()
-    #             weight.data[input_lstm.hidden_size: 2 * input_lstm.hidden_size] = 1
-    #             weight = eval('input_lstm.bias_hh_l' + str(ind) + '_reverse')
-    #             weight.data.zero_()
-    #             weight.data[input_lstm.hidden_size: 2 * input_lstm.hidden_size] = 1
-
-

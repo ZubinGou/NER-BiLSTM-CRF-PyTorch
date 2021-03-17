@@ -245,7 +245,8 @@ model = BiLSTM_CRF(vocab_size=len(word_to_id),
                    # n_cap=4,
                    # cap_embedding_dim=10)
 if parameters['reload']:
-    model.load_state_dict(torch.load(model_name))
+    # model.load_state_dict(torch.load(model_name))
+    model = torch.load(model_name)
 
 model.to(device)
 
@@ -257,8 +258,8 @@ best_dev_F = -1.0
 best_test_F = -1.0
 best_train_F = -1.0
 all_F = [[0, 0, 0]]
-plot_every = 2
-eval_every = 4
+plot_every = 1000
+eval_every = 2000
 count = 0
 vis = visdom.Visdom()
 sys.stdout.flush()
