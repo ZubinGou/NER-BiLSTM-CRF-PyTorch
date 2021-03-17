@@ -176,12 +176,6 @@ def eval(model, datas, maxl=1):
               ["%.3f" % (confusion_matrix[i][i] * 100. / max(1, confusion_matrix[i].sum()))])
         ))
 
-# for l in range(1, 6):
-#     print('maxl=', l)
-#     eval(model, test_data, l)
-    # print()
-# for i in range(10):
-#     eval(model, test_data, 100)
 
 eval(model, test_data, 1)
 print(time.time() - t)

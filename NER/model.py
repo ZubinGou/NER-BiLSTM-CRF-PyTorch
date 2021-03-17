@@ -1,6 +1,4 @@
 import torch
-import torch.autograd as autograd
-from torch.functional import atleast_1d
 import torch.nn as nn
 from torch.autograd import Variable
 
@@ -148,7 +146,7 @@ class BiLSTM_CRF(nn.Module):
             [tags, torch.LongTensor([self.tag_to_ix[STOP_TAG]]).to(self.device)]
         )
 
-        score = torch.sum(self.transitions[pad_stop_tags, pad_start_tags]) + torch.sum(
+        score = torch.sum(self.transitions[pad_start_tags, pad_stop_tags]) + torch.sum(
             feats[r, tags]
         )
         return score
@@ -208,70 +206,16 @@ class BiLSTM_CRF(nn.Module):
     def _forward_alg(self, feats):
         # calculate in log domain
         # feats is len(sentence) * tagset_size
-        # initialize alpha with a Tensor with values all equal to -10000.
-        # init_alphas = torch.Tensor(1, self.tagset_size).fill_(-10000.0)
-        # init_alphas[0][self.tag_to_ix[START_TAG]] = 0.0
-        # forward_var = autograd.Variable(init_alphas).to(self.device)
-
-        # for feat in feats:
-        #     emit_score = feat.view(-1, 1)
-        #     tag_var = forward_var + self.transitions + emit_score
-        #     max_tag_var, _ = torch.max(tag_var, dim=1)
-        #     tag_var = tag_var - max_tag_var.view(-1, 1)
-        #     forward_var = max_tag_var + torch.log(
-        #         torch.sum(torch.exp(tag_var), dim=1)
-        #     ).view(
-        #         1, -1
-        #     )  # ).view(1, -1)
-        # terminal_var = (forward_var + self.transitions[self.tag_to_ix[STOP_TAG]]).view(
-        #     1, -1
-        # )
-        # alpha = log_sum_exp(terminal_var)
-        # # Z(x)
-
-        # Z
-        alpha = torch.full((1, self.tagset_size), -10000.0)
-        alpha[0][self.tag_to_ix[START_TAG]] = 0
-        for frame in feats:
-            alpha = log_sum_exp(alpha.T + frame.unsqueece(0) + self.transitions)
-        return log_sum_exp(alpha.T + 0 + self.transitions[:, [self.tag_to_ix[STOP_TAG]]]).flatten()
+        alpha = torch.full((1, self.tagset_size), -10000.0, device=self.device)
+        alpha[0][self.tag_to_ix[START_TAG]] = 0.
+        for feat in feats:
+            alpha = log_sum_exp(alpha.T + feat.unsqueeze(0) + self.transitions)
+        return log_sum_exp(alpha.T + 0 + self.transitions[:, [self.tag_to_ix[STOP_TAG]]]).flatten()[0]
 
 
     def viterbi_decode(self, feats):
-        # backpointers = []
-        # # analogous to forward
-        # init_vvars = torch.Tensor(1, self.tagset_size).fill_(-10000.0)
-        # init_vvars[0][self.tag_to_ix[START_TAG]] = 0
-        # forward_var = Variable(init_vvars).to(self.device)
-
-        # for feat in feats:
-        #     next_tag_var = (
-        #         forward_var.view(1, -1).expand(self.tagset_size, self.tagset_size)
-        #         + self.transitions
-        #     )
-        #     _, bptrs_t = torch.max(next_tag_var, dim=1)
-        #     bptrs_t = bptrs_t.squeeze().data.cpu().numpy()
-        #     next_tag_var = next_tag_var.data.cpu().numpy()
-        #     viterbivars_t = next_tag_var[range(len(bptrs_t)), bptrs_t]
-        #     viterbivars_t = Variable(torch.FloatTensor(viterbivars_t)).to(self.device)
-        #     forward_var = viterbivars_t + feat
-        #     backpointers.append(bptrs_t)
-
-        # terminal_var = forward_var + self.transitions[self.tag_to_ix[STOP_TAG]]
-        # terminal_var.data[self.tag_to_ix[STOP_TAG]] = -10000.0
-        # terminal_var.data[self.tag_to_ix[START_TAG]] = -10000.0
-        # best_tag_id = argmax(terminal_var.unsqueeze(0), dim=1)
-        # path_score = terminal_var[best_tag_id]
-        # best_path = [best_tag_id]
-        # for bptrs_t in reversed(backpointers):
-        #     best_tag_id = bptrs_t[best_tag_id]
-        #     best_path.append(best_tag_id)
-        # start = best_path.pop()
-        # assert start == self.tag_to_ix[START_TAG]
-        # best_path.reverse()
-        # return path_score, best_path
         backtrace = []
-        alpha = torch.full((1, self.tagset_size), -10000.)
+        alpha = torch.full((1, self.tagset_size), -10000., device=self.device)
         alpha[0][self.tag_to_ix[START_TAG]] = 0
         for feat in feats:
             smat = alpha.T + feat.unsqueeze(0) + self.transitions # (tagset_size, tagset_size)
@@ -307,6 +251,6 @@ class BiLSTM_CRF(nn.Module):
             score, tag_seq = self.viterbi_decode(feats)
         else:
             score, tag_seq = torch.max(feats, 1)
-            tag_seq = list(tag_seq.cpu().data)
+            tag_seq = tag_seq.cpu().tolist()
 
         return score, tag_seq

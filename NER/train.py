@@ -258,8 +258,8 @@ best_dev_F = -1.0
 best_test_F = -1.0
 best_train_F = -1.0
 all_F = [[0, 0, 0]]
-plot_every = 1000
-eval_every = 2000
+plot_every = 100
+eval_every = 200
 count = 0
 vis = visdom.Visdom()
 sys.stdout.flush()
