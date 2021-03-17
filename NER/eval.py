@@ -21,10 +21,6 @@ optparser.add_option(
     '--score', default='evaluation/temp/score.txt',
     help='score file location'
 )
-# optparser.add_option(
-#     "-f", "--crf", default="1",
-#     type='int', help="Use CRF (0 to disable)"
-# )
 optparser.add_option(
     "-g", '--use_gpu', default='1',
     type='int', help='whether or not to ues gpu'
@@ -34,7 +30,7 @@ optparser.add_option(
     help='loss file location'
 )
 optparser.add_option(
-    '--model_path', default='models/t4-night',
+    '--model_path', default='models/test',
     help='model path'
 )
 optparser.add_option(
@@ -88,31 +84,12 @@ if use_gpu:
     model.cuda()
 model.eval()
 
-# def getmaxlen(tags):
-#     l = 1
-#     maxl = 1
-#     for tag in tags:
-#         tag = id_to_tag[tag]
-#         if 'I-' in tag:
-#             l += 1
-#         elif 'B-' in tag:
-#             l = 1
-#         elif 'E-' in tag:
-#             l += 1
-#             maxl = max(maxl, l)
-#             l = 1
-#         elif 'O' in tag:
-#             l = 1
-#     return maxl
 
-def eval(model, datas, maxl=1):
+def eval(model, datas):
     prediction = []
     confusion_matrix = torch.zeros((len(tag_to_id) - 2, len(tag_to_id) - 2))
     for data in datas:
         ground_truth_id = data['tags']
-        # l = getmaxlen(ground_truth_id)
-        # if not l == maxl:
-        #     continue
         words = data['str_words']
         chars2 = data['chars']
         caps = data['caps']
@@ -177,5 +154,5 @@ def eval(model, datas, maxl=1):
         ))
 
 
-eval(model, test_data, 1)
+eval(model, test_data)
 print(time.time() - t)

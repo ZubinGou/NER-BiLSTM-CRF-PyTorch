@@ -7,8 +7,10 @@ from utils import *
 START_TAG = "<START>"
 STOP_TAG = "<STOP>"
 
+
 def to_scalar(var):
     return var.view(-1).data.tolist()[0]
+
 
 def argmax(vec, dim):
     _, idx = torch.max(vec, 1)
@@ -207,28 +209,31 @@ class BiLSTM_CRF(nn.Module):
         # calculate in log domain
         # feats is len(sentence) * tagset_size
         alpha = torch.full((1, self.tagset_size), -10000.0, device=self.device)
-        alpha[0][self.tag_to_ix[START_TAG]] = 0.
+        alpha[0][self.tag_to_ix[START_TAG]] = 0.0
         for feat in feats:
             alpha = log_sum_exp(alpha.T + feat.unsqueeze(0) + self.transitions)
-        return log_sum_exp(alpha.T + 0 + self.transitions[:, [self.tag_to_ix[STOP_TAG]]]).flatten()[0]
-
+        return log_sum_exp(
+            alpha.T + 0 + self.transitions[:, [self.tag_to_ix[STOP_TAG]]]
+        ).flatten()[0]
 
     def viterbi_decode(self, feats):
         backtrace = []
-        alpha = torch.full((1, self.tagset_size), -10000., device=self.device)
+        alpha = torch.full((1, self.tagset_size), -10000.0, device=self.device)
         alpha[0][self.tag_to_ix[START_TAG]] = 0
         for feat in feats:
-            smat = alpha.T + feat.unsqueeze(0) + self.transitions # (tagset_size, tagset_size)
-            backtrace.append(smat.argmax(0)) # column_max
+            smat = (
+                alpha.T + feat.unsqueeze(0) + self.transitions
+            )  # (tagset_size, tagset_size)
+            backtrace.append(smat.argmax(0))  # column_max
             alpha = log_sum_exp(smat)
         # backtrack
         smat = alpha.T + 0 + self.transitions[:, [self.tag_to_ix[STOP_TAG]]]
         best_tag_id = smat.flatten().argmax().item()
         best_path = [best_tag_id]
-        for bptrs_t in reversed(backtrace[1:]): # ignore START_TAG
+        for bptrs_t in reversed(backtrace[1:]):  # ignore START_TAG
             best_tag_id = bptrs_t[best_tag_id].item()
             best_path.append(best_tag_id)
-        return log_sum_exp(smat).item(), best_path[::-1] # item() return list?
+        return log_sum_exp(smat).item(), best_path[::-1]  # item() return list?
 
     def neg_log_likelihood(self, sentence, tags, chars, caps, chars2_length, d):
         # sentence, tags is a list of ints
