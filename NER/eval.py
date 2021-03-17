@@ -7,8 +7,9 @@ from torch.autograd import Variable
 
 from loader import *
 from utils import *
+from train import evaluating
 
-t = time.time()
+
 
 # python -m visdom.server
 
@@ -138,7 +139,7 @@ def eval(model, datas):
 
     os.system('%s < %s > %s' % (eval_script, predf, scoref))
 
-    with open(scoref, 'rb') as f:
+    with open(scoref, 'r') as f:
         for l in f.readlines():
             print(l.strip())
 
@@ -148,11 +149,15 @@ def eval(model, datas):
     ))
     for i in range(confusion_matrix.size(0)):
         print(("{: >2}{: >7}{: >7}%s{: >9}" % ("{: >7}" * confusion_matrix.size(0))).format(
-            str(i), id_to_tag[i], str(confusion_matrix[i].sum()),
+            str(i), id_to_tag[i], str(confusion_matrix[i].sum().item()),
             *([confusion_matrix[i][j] for j in range(confusion_matrix.size(0))] +
               ["%.3f" % (confusion_matrix[i][i] * 100. / max(1, confusion_matrix[i].sum()))])
         ))
 
+# t = time.time()
+# eval(model, test_data)
+# print(time.time() - t)
 
-eval(model, test_data)
+t = time.time()
+evaluating(model, test_data, id_to_tag)
 print(time.time() - t)

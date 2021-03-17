@@ -25,7 +25,7 @@ PyTorch implementation of a BiLSTM-CRF model for named entity recognition.
 - BiLSTM-CRF (Lample et. al., 2016)
 
 ## Results
-用 Tesla T4 训练一晚，约70个 epoch，test 集上 F1 达到 90.01
+用 Tesla T4 训练一晚，约70个 epoch，test 集上 F1 达到 91.01
 
 ![](images/result.png)
 

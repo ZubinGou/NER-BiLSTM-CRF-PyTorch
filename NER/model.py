@@ -123,11 +123,11 @@ class BiLSTM_CRF(nn.Module):
         # self.hw_gate = nn.Linear(self.out_channels, self.out_channels)
         # self.h2_h1 = nn.Linear(hidden_dim * 2, hidden_dim)
         # self.tanh = nn.Tanh()
+        # init_linear(self.h2_h1)
+        # init_linear(self.hw_gate)
+        # init_linear(self.hw_trans)
         self.hidden2tag = nn.Linear(hidden_dim * 2, self.tagset_size)
-        init_linear(self.h2_h1)
         init_linear(self.hidden2tag)
-        init_linear(self.hw_gate)
-        init_linear(self.hw_trans)
 
         if self.use_crf:
             self.transitions = nn.Parameter(
